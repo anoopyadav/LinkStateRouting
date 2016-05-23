@@ -1,0 +1,42 @@
+Link State Protocol Implementation
+--Anoop Yadav
+
+1). Project Layout
+I chose to go with 6 different source files for clearly distinguishing different components. 
+
+manager.h manager.cc: Contains code relevant to the manager. The forking code is part of the manager.
+
+router.h router.cc: Contains code relevant to the router processes. The method routerSetup() is called by the forked child process.
+
+dijkstra.h dijkstra.cc: Contains code relevant to the algorithm definition.
+
+2). Packet Format
+I used a variety of status codes to identify the type of messages between manager and router
+
+1111 - list termination. Sent from manager to router.
+6666 - Routers are ready to connect to neighbours. 
+7777 - Manager sends go ahead to router to start connecting to neighbours.
+9999 - Router has received ACK from all neighbours.
+8888 - Start excahnging LSPs.
+3333 - Router has received all LSPs.
+6789 - Kill message for routers.	
+
+LSP packet format - 5678 <router_id> <number_of_items> <neighbour_id, link_weight, UDP_port>*<number_of_items>
+
+3). Implementation details
+I used IO multiplexing using the select statement at the manager to handle messages from the routers. For the routers, I simply used blocking recvfrom() calls while communicating only with the manager or only communicating with neighbours. I used IO multiplexing on the manager TCP socket and the router's UDP port for the final step, when expecting data packets from routers and commands from the manager.
+
+4). How to run
+* type "make"
+* type "manager <topology_file>"
+
+All commands typed without quotes.
+
+5). Notes
+* My manager uses the port "54680". I didn't get a chance to update my code to include dynamic binding.
+* Router UDP ports are randomly generated. 
+* The initial setup phase (right up before data packets) can take between 1 - 3 minutes.
+* The program outputs some minimal status information on the terminal to keep you awake.
+* Each data packet delivery will take 20 seconds. Rather, manager sleeps 20 seconds after sending each data packet request. So that would be 40 seconds after final request is sent.
+* Each router, upon receiving a data packet, will output a message to its log, then look up the next hop and send the message.
+* If the message is meant for the router, it will show that using **My Packet** in the log message.
